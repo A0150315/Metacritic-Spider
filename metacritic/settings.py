@@ -76,9 +76,10 @@ DOWNLOAD_DELAY = 1
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    "metacritic.pipelines.MetacriticPipeline": 300,
-#}
+ITEM_PIPELINES = {
+    "metacritic.pipelines.DataValidationPipeline": 300,
+    "metacritic.pipelines.DuplicatesPipeline": 400,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -100,6 +101,14 @@ AUTOTHROTTLE_DEBUG = False
 #HTTPCACHE_DIR = "httpcache"
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
+
+# 日志配置
+LOG_LEVEL = 'INFO'
+LOG_FILE = 'scrapy.log'
+LOG_ENCODING = 'utf-8'
+
+# 启用统计信息扩展
+LOG_STATS_INTERVAL = 60
 
 # Set settings whose default value is deprecated to a future-proof value
 REQUEST_FINGERPRINTER_IMPLEMENTATION = "2.7"

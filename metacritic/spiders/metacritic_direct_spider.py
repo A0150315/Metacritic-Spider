@@ -1,5 +1,6 @@
 import scrapy
 import re
+from ..items import GameItem
 
 
 class MetacriticDirectSpider(scrapy.Spider):
@@ -142,29 +143,15 @@ class MetacriticDirectSpider(scrapy.Spider):
                 if title:
                     game_platform_title_list.append(title.strip())
 
-            yield {
-                "name": name,
-                "slug": slug,
-                "metascore": metascore,
-                "user_score": user_score,
-                "user_reviews": user_reviews,
-                "release_date": release_date,
-                "platform": ", ".join(game_platform_title_list),
-            }
+            yield GameItem(
+                name=name,
+                slug=slug,
+                metascore=metascore,
+                user_score=user_score,
+                user_reviews=user_reviews,
+                release_date=release_date,
+                platform=", ".join(game_platform_title_list),
+            )
         except Exception as e:
             self.logger.error(f"解析游戏详情失败: {e}")
             yield None
-
-
-if __name__ == "__main__":
-    text = "Based on 10,223,11 User Ratings"
-    all_digits = re.sub(
-        r"[^\d]",
-        "",
-        (
-            re.search(r"\d+(?:,\d+)*", text).group(0)
-            if re.search(r"\d+(?:,\d+)*", text)
-            else "0"
-        ),
-    )
-    print(all_digits)

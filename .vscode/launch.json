@@ -2,20 +2,6 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "运行Scrapy爬虫: igdb_metacritic_spider",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "scrapy",
-            "args": [
-                "crawl",
-                "igdb_metacritic_spider"
-            ],
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "python": "${workspaceFolder}/.venv/bin/python",
-            "justMyCode": true
-        },
-        {
             "name": "运行Scrapy爬虫: metacritic_direct_spider",
             "type": "debugpy",
             "request": "launch",
