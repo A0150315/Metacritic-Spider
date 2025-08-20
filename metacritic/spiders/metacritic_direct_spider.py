@@ -1,7 +1,4 @@
-import json
 import scrapy
-from scrapy.spiders import CrawlSpider, Rule
-from scrapy.linkextractors import LinkExtractor
 import re
 
 
@@ -33,24 +30,23 @@ class MetacriticDirectSpider(scrapy.Spider):
             }
         },
         "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-        "DOWNLOAD_DELAY": 1.5,  # 添加延迟避免被封IP
-        "RANDOMIZE_DOWNLOAD_DELAY": True,
-        "CONCURRENT_REQUESTS": 8,  # 控制并发请求数
-        "RETRY_TIMES": 3,  # 重试次数
-        "COOKIES_ENABLED": False,  # 禁用cookies可以减少被识别风险
+        "DOWNLOAD_DELAY": 0,
+        "RANDOMIZE_DOWNLOAD_DELAY": False,
+        "CONCURRENT_REQUESTS": 128,
+        "RETRY_TIMES": 1,
+        "RETRY_DELAY": 0.5,
+        "COOKIES_ENABLED": False,
+        "AUTOTHROTTLE_ENABLED": False,
+        "ROBOTSTXT_OBEY": False,
     }
 
     def parse(self, response):
-        """
-        解析游戏列表页面，提取每个游戏的基本信息和链接，然后请求详情页
-        """
+        """解析游戏列表页面，提取游戏信息和链接"""
         self.logger.info(f"正在爬取页面: {response.url}")
 
-        # 解析游戏列表
         games = response.css("div.c-finderProductCard")
 
         for game in games:
-            # 提取游戏链接和名称
             game_link = game.css("a::attr(href)").get()
             name = game.css(
                 "h3.c-finderProductCard_titleHeading span:nth-child(2)::text"
@@ -59,16 +55,12 @@ class MetacriticDirectSpider(scrapy.Spider):
             if game_link and name:
                 name = name.strip()
                 metascore = game.css("div.c-siteReviewScore span::text").get() or "N/A"
-                print(f"name: {name}, metascore: {metascore}")
 
-                # 构建详情页请求
                 yield scrapy.Request(
                     url=response.urljoin(game_link),
                     callback=self.parse_game_detail,
                     meta={"name": name, "metascore": metascore},
-                    headers={
-                        "Referer": response.url,
-                    },
+                    headers={"Referer": response.url},
                 )
 
         # 处理下一页
@@ -81,29 +73,22 @@ class MetacriticDirectSpider(scrapy.Spider):
         yield scrapy.Request(
             url=response.urljoin(next_page),
             callback=self.parse,
-            headers={
-                "Referer": response.url,
-            },
+            headers={"Referer": response.url},
         )
 
     def parse_game_detail(self, response):
-        """
-        解析游戏详情页面，提取详细信息
-        """
+        """解析游戏详情页面，提取详细信息"""
         try:
             name = response.meta["name"]
             metascore = response.meta["metascore"]
 
             # 从URL中提取slug
             url_parts = response.url.strip("/").split("/")
-            if len(url_parts) >= 2:
-                slug = url_parts[-1]
-            else:
-                slug = "unknown"
+            slug = url_parts[-1] if len(url_parts) >= 2 else "unknown"
 
             self.logger.info(f"正在解析游戏详情: {name} (slug: {slug})")
 
-            # 解析用户评分 (需要根据实际DOM结构调整)
+            # 解析用户评分
             user_score = response.css(
                 "div.c-productHero_scoreInfo.g-inner-spacing-top-medium.g-outer-spacing-bottom-medium.g-outer-spacing-top-medium > div.c-productScoreInfo.u-clearfix > div.c-productScoreInfo_scoreContent.u-flexbox.u-flexbox-alignCenter.u-flexbox-justifyFlexEnd.g-width-100.u-flexbox-nowrap > div.c-productScoreInfo_scoreNumber.u-float-right > div > div > span::text"
             ).get()
@@ -153,15 +138,10 @@ class MetacriticDirectSpider(scrapy.Spider):
             for title_dom in (
                 game_platform_title_dom_list + another_game_platform_title_dom_list
             ):
-                title = title_dom.get()  # 先获取值
-                if title:  # 检查值是否存在
+                title = title_dom.get()
+                if title:
                     game_platform_title_list.append(title.strip())
 
-            print(
-                f"name: {name}, slug: {slug}, metascore: {metascore}, user_score: {user_score}, user_reviews: {user_reviews}, release_date: {release_date}, platform: {','.join(game_platform_title_list)}"
-            )
-
-            # 返回数据
             yield {
                 "name": name,
                 "slug": slug,

@@ -12,6 +12,7 @@
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/.venv/bin/python",
             "justMyCode": true
         },
         {
@@ -25,6 +26,7 @@
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/.venv/bin/python",
             "justMyCode": true
         }
     ]
