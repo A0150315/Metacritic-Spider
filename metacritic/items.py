@@ -10,8 +10,3 @@ class GameItem(scrapy.Item):
     user_reviews = scrapy.Field()
     release_date = scrapy.Field()
     platform = scrapy.Field()
-
-
-class MetacriticItem(scrapy.Item):
-    """兼容性保留的原始Item"""
-    pass

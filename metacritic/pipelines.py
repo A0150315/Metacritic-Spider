@@ -96,9 +96,3 @@ class DuplicatesPipeline:
         else:
             self.ids_seen.add(slug)
             return item
-
-
-class MetacriticPipeline:
-    """兼容性保留的原始Pipeline"""
-    def process_item(self, item, spider=None):
-        return item

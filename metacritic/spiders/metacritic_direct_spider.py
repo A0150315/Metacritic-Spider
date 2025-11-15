@@ -185,4 +185,4 @@ class MetacriticDirectSpider(scrapy.Spider):
             )
         except Exception as e:
             self.logger.error(f"解析游戏详情失败: {e}")
-            yield None
+            return

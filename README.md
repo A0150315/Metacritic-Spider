@@ -18,16 +18,27 @@ git clone <repository-url>
 cd Metacritic-Spider
 ```
 
-### 2. 创建虚拟环境
+### 方法A：使用 uv（推荐）
+1. 安装 uv（任选其一）：
+   ```bash
+   brew install uv                   # macOS（推荐）
+   curl -LsSf https://astral.sh/uv/install.sh | sh  # 通用脚本
+   ```
+2. 同步依赖并创建隔离环境（uv 会默认创建并维护 `.venv/`）：
+   ```bash
+   uv sync
+   ```
+3. 进入虚拟环境（可选，`uv run` 会自动激活）：
+   ```bash
+   source .venv/bin/activate  # Linux/Mac
+   .venv\\Scripts\\activate  # Windows
+   ```
+
+### 方法B：传统 pip（备用）
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # Linux/Mac
-# 或
 .venv\\Scripts\\activate  # Windows
-```
-
-### 3. 安装依赖
-```bash
 pip install -r requirements.txt
 ```
 
@@ -35,10 +46,11 @@ pip install -r requirements.txt
 
 ### 直接爬取Metacritic
 ```bash
-# 激活虚拟环境
-source .venv/bin/activate
+# 使用 uv 运行（自动激活 .venv）
+uv run python -m scrapy crawl metacritic_direct_spider
 
-# 运行主爬虫
+# 或手动激活虚拟环境后运行
+source .venv/bin/activate
 python -m scrapy crawl metacritic_direct_spider
 ```
 
@@ -116,6 +128,17 @@ custom_settings = {
 max_page = 567  # 修改此值调整爬取范围
 ```
 
+## uv 使用速查
+
+| 目的 | 命令 |
+|------|------|
+| 同步依赖 / 创建虚拟环境 | `uv sync` |
+| 运行爬虫 | `uv run python -m scrapy crawl metacritic_direct_spider` |
+| 升级依赖到最新次版本 | `uv pip upgrade --latest` |
+| 导出 requirements.txt（供 CI 或兼容旧流程） | `uv export --format requirements-txt --output requirements.txt` |
+
+> `pyproject.toml` 现在是依赖的唯一事实来源；`requirements.txt` 可以随时通过 `uv export` 重新生成。
+
 ## 注意事项
 
 ⚠️ **使用建议**：
@@ -135,9 +158,7 @@ max_page = 567  # 修改此值调整爬取范围
    ```bash
    # 重新创建虚拟环境
    rm -rf .venv
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
+   uv sync
    ```
 
 2. **网络超时**
