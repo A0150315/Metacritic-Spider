@@ -44,7 +44,11 @@ jobs:
 
       - name: Upload dataset artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: ${{ inputs.output }}
-          path: ${{ inputs.output }}
-          if-no-files-found: error
+          name: scrapy-output-${{ github.run_id }}
+          path: |
+            ${{ inputs.output }}
+            scrapy.log
+            *.log
+          if-no-files-found: warn
