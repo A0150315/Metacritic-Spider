@@ -9,30 +9,20 @@ class MetacriticDirectSpider(scrapy.Spider):
     current_page = 1
     max_page = None
     start_urls = [
-        f"https://www.metacritic.com/browse/game/?releaseYearMin=1958&releaseYearMax=2025&page=1"
+        f"https://www.metacritic.com/browse/game/?releaseYearMin=1958&releaseYearMax=2027&page=1"
     ]
 
     # CSS选择器映射表 - 便于网页更新时维护
     SELECTORS = {
         # 游戏列表页面选择器
-        "game_cards": "div.c-finderProductCard",
+        "game_cards": "[data-testid='filter-results']",
         "game_link": "a::attr(href)",
-        "game_name": "h3.c-finderProductCard_titleHeading span:nth-child(2)::text",
-        "list_metascore": "div.c-siteReviewScore span::text",
-        "max_page": "#__layout > div > div > div > main > section > div > span > span:last-child > span > span > span::text",
-        
+        "game_name": "h3[data-testid='product-title'] span:last-child::text",
+        "list_metascore": ".c-siteReviewScore span::text",
+        "max_page": ".c-navigation-pagination__page .c-navigation-pagination__item-content::text",
+
         # 游戏详情页面选择器
-        "user_score": "div.c-productHero_scoreInfo.g-inner-spacing-top-medium.g-outer-spacing-bottom-medium.g-outer-spacing-top-medium > div.c-productScoreInfo.u-clearfix > div.c-productScoreInfo_scoreContent.u-flexbox.u-flexbox-alignCenter.u-flexbox-justifyFlexEnd.g-width-100.u-flexbox-nowrap > div.c-productScoreInfo_scoreNumber.u-float-right > div > div > span::text",
-        
-        "user_reviews_primary": "#__layout > div > div.c-layoutDefault_page > div.c-pageProductGame > div:nth-child(1) > div > div > div.c-productHero_player-scoreInfo.u-grid.g-grid-container > div.c-productHero_score-container.u-flexbox.u-flexbox-column.g-bg-white > div.c-productHero_scoreInfo.g-inner-spacing-top-medium.g-outer-spacing-bottom-medium.g-outer-spacing-top-medium > div.c-productScoreInfo.u-clearfix > div.c-productScoreInfo_scoreContent.u-flexbox.u-flexbox-alignCenter.u-flexbox-justifyFlexEnd.g-width-100.u-flexbox-nowrap > div.c-productScoreInfo_text.g-outer-spacing-right-auto > span:last-child > a > span::text",
-        
-        "user_reviews_fallback": "#__layout > div > div.c-layoutDefault_page > div.c-pageProductGame > div:nth-child(1) > div > div > div.c-productHero_player-scoreInfo.u-grid.g-grid-container > div.c-productHero_score-container.u-flexbox.u-flexbox-column.g-bg-white > div.c-productHero_scoreInfo.g-inner-spacing-top-medium.g-outer-spacing-bottom-medium.g-outer-spacing-top-medium > div:nth-child(1) > div > div.c-productScoreInfo_scoreContent.u-flexbox.u-flexbox-alignCenter.u-flexbox-justifyFlexEnd.g-width-100.u-flexbox-nowrap > div.c-productScoreInfo_text.g-outer-spacing-right-auto > span:last-child > a > span::text",
-        
-        "release_date": "div.g-text-xsmall > span.u-text-uppercase::text",
-        
-        "platform_wrapper": "#__layout > div > div.c-layoutDefault_page > div.c-pageProductGame > div.c-PageProductGame_row > div.c-gamePlatformsSection.g-grid-container.g-outer-spacing-bottom-medium > div.c-gamePlatformsSection_list.u-grid-columns",
-        "platform_svg_title": "div:nth-child(1) > div > div > svg > title::text",
-        "platform_text": "div:nth-child(1) > div > div::text",
+        "release_date": ".c-product-details__section__value::text",
     }
 
     custom_settings = {
@@ -57,11 +47,17 @@ class MetacriticDirectSpider(scrapy.Spider):
         "DOWNLOAD_DELAY": 0,
         "RANDOMIZE_DOWNLOAD_DELAY": False,
         "CONCURRENT_REQUESTS": 128,
+        "CONCURRENT_REQUESTS_PER_DOMAIN": 128,
+        "CONCURRENT_REQUESTS_PER_IP": 128,
         "RETRY_TIMES": 1,
         "RETRY_DELAY": 0.5,
         "COOKIES_ENABLED": False,
         "AUTOTHROTTLE_ENABLED": False,
         "ROBOTSTXT_OBEY": False,
+        "DNSCACHE_ENABLED": True,
+        "DNSCACHE_SIZE": 2048,
+        "REACTOR_THREADPOOL_MAXSIZE": 64,
+        "LOGSTATS_INTERVAL": 30,
     }
 
     def parse(self, response):
@@ -99,7 +95,7 @@ class MetacriticDirectSpider(scrapy.Spider):
             self.logger.info(f"已达到最大页数 {self.max_page}，爬取完成")
             return
 
-        next_page = f"https://www.metacritic.com/browse/game/?releaseYearMin=1958&releaseYearMax=2025&page={self.current_page}"
+        next_page = f"https://www.metacritic.com/browse/game/?releaseYearMin=1958&releaseYearMax=2027&page={self.current_page}"
         self.logger.info(f"找到下一页: {next_page}")
         yield scrapy.Request(
             url=response.urljoin(next_page),
@@ -109,15 +105,15 @@ class MetacriticDirectSpider(scrapy.Spider):
 
     def get_max_page(self, response):
         """从分页导航动态获取总页数"""
-        
-        max_page_text = response.css(self.SELECTORS["max_page"]).get()
-        
-        if max_page_text and max_page_text.strip().isdigit():
-            max_page = int(max_page_text.strip())
+        # 分页数字可能有多个，取最后一个（即最大页码）
+        page_texts = response.css(self.SELECTORS["max_page"]).getall()
+        page_nums = [t.strip() for t in page_texts if t.strip().isdigit()]
+
+        if page_nums:
+            max_page = int(page_nums[-1])
             self.logger.info(f"从分页导航获取到最大页数: {max_page}")
             return max_page
-        
-        # 如果无法获取，返回None，通过空页面检测自动停止
+
         self.logger.warning("无法从分页导航获取总页数，将通过空页面检测自动停止")
         return None
 
@@ -133,46 +129,29 @@ class MetacriticDirectSpider(scrapy.Spider):
 
             self.logger.info(f"正在解析游戏详情: {name} (slug: {slug})")
 
-            # 解析用户评分
-            user_score = response.css(self.SELECTORS["user_score"]).get()
-            user_score = user_score.strip() if user_score else "N/A"
-            user_score = "N/A" if user_score == "tbd" else user_score
+            # 解析用户评分 - 取所有 bg-score span 中的第二个（第一个是 metascore）
+            all_scores = response.css('[class*="bg-score"] span::text').getall()
+            all_scores = [s.strip() for s in all_scores if s.strip()]
+            user_score = all_scores[1] if len(all_scores) > 1 else "N/A"
+            if user_score == "tbd":
+                user_score = "N/A"
 
-            # 解析用户评论数量 - 使用回退策略
-            review_text = response.css(self.SELECTORS["user_reviews_primary"]).get()
-
-            if not review_text:
-                review_text = response.css(self.SELECTORS["user_reviews_fallback"]).get()
-
-            if not review_text:
-                review_text = "0"
-
-            user_reviews = re.sub(
-                r"[^\d]",
-                "",
-                (
-                    re.search(r"\d+(?:,\d+)*", review_text).group(0)
-                    if re.search(r"\d+(?:,\d+)*", review_text)
-                    else "0"
-                ),
-            )
+            # 解析用户评论数量 - 从 "Based on X User Ratings" 提取
+            user_reviews = "0"
+            review_texts = response.css('[data-testid="global-score-review-count"] a::text').getall()
+            for text in review_texts:
+                match = re.search(r"Based on\s+([\d,]+)\s+User", text)
+                if match:
+                    user_reviews = match.group(1).replace(",", "")
+                    break
 
             # 解析发布日期
             release_date = response.css(self.SELECTORS["release_date"]).get()
             release_date = release_date.strip() if release_date else "N/A"
 
             # 解析游戏平台
-            game_platform_wrapper_dom_list = response.css(self.SELECTORS["platform_wrapper"])
-            game_platform_title_dom_list = game_platform_wrapper_dom_list.css(self.SELECTORS["platform_svg_title"])
-            another_game_platform_title_dom_list = game_platform_wrapper_dom_list.css(self.SELECTORS["platform_text"])
-            
-            game_platform_title_list = []
-            for title_dom in (
-                game_platform_title_dom_list + another_game_platform_title_dom_list
-            ):
-                title = title_dom.get()
-                if title:
-                    game_platform_title_list.append(title.strip())
+            platform = response.css('[data-testid="platform-selector"] ::text').get()
+            platform = platform.strip() if platform else "N/A"
 
             yield GameItem(
                 name=name,
@@ -181,7 +160,7 @@ class MetacriticDirectSpider(scrapy.Spider):
                 user_score=user_score,
                 user_reviews=user_reviews,
                 release_date=release_date,
-                platform=", ".join(game_platform_title_list),
+                platform=platform,
             )
         except Exception as e:
             self.logger.error(f"解析游戏详情失败: {e}")
